@@ -1,7 +1,7 @@
 {
   "name": "conductor",
-  "version": "0.1.0",
-  "description": "Conductor Spec-Driven Development for ZCode: scaffold project context (product, guidelines, tech stack, workflow), then run feature/bug tracks through a strict spec -> plan -> implement lifecycle with status, review and git-aware revert. Vendored from gemini-cli-extensions/conductor.",
+  "version": "0.2.0",
+  "description": "Conductor Spec-Driven Development for ZCode: scaffold project context (product, guidelines, tech stack, workflow), then run feature/bug tracks through a strict spec -> plan -> implement lifecycle with status, review and git-aware revert. Injects a compact track summary at session start. Vendored from gemini-cli-extensions/conductor.",
   "author": {
     "name": "gemini-cli-extensions",
     "url": "https://github.com/gemini-cli-extensions"
@@ -11,5 +11,6 @@
   "license": "Apache-2.0",
   "keywords": ["spec-driven-development", "planning", "project-management", "skills", "conductor"],
   "commands": "commands",
-  "skills": "skills"
+  "skills": "skills",
+  "hooks": "hooks"
 }

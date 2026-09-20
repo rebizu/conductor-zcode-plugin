@@ -1,0 +1,19 @@
+{
+  "description": "Conductor: inject a compact track/plan summary at session start when the working directory is a conductor project. Silent no-op when there is no conductor/ directory; pure file reads, never blocks the session.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "process",
+            "command": "node",
+            "args": ["${ZCODE_PLUGIN_ROOT}/hooks/conductor-context.mjs"],
+            "timeoutMs": 10000,
+            "statusMessage": "conductor: reading project context..."
+          }
+        ]
+      }
+    ]
+  }
+}

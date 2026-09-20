@@ -6,7 +6,7 @@
       "name": "conductor",
       "source": ".",
       "description": "Conductor Spec-Driven Development skills for ZCode",
-      "version": "0.1.0"
+      "version": "0.2.0"
     }
   ]
 }
