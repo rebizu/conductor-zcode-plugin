@@ -16,7 +16,7 @@ Upstream ships skills for Antigravity and a Claude Code marketplace manifest, bu
 | `skills/conductor-review` | upstream | `/conductor:review` — reviews completed work against guidelines and the plan |
 | `skills/conductor` | this repo | Lifecycle router — routes overall or ambiguous intent ("continue where we left off") to the right protocol |
 | `hooks/conductor-context.mjs` | this repo | SessionStart hook: prints a compact summary (active track, next task, counts) when the project has `conductor/`; silent no-op otherwise |
-| `commands/*.md` | this repo | Thin slash-command wrappers (`/conductor:setup` etc.) that invoke the corresponding skill |
+| `commands/*.md` | this repo | Thin slash-command wrappers (`/conductor:setup` etc.) that invoke the corresponding skill; `/conductor:implement` also drives session-todo ↔ plan.md sync |
 | `scripts/refresh-upstream.mjs` | this repo | Re-vendors `skills/` from upstream main and re-applies the local `python` adaptation |
 
 The `conductor/` artifacts live inside each project (workspace scope), so context is versioned with the repo and shared across the team — same as upstream.
@@ -31,11 +31,22 @@ Conductor project: 3 track(s), 1 complete, 1 in progress.
 Active track: "Add a dark mode toggle to the settings page" (in progress).
 Next task: Add toggle to settings page (3 of 5 plan tasks pending).
 Continue with /conductor:implement, overview with /conductor:status.
+While implementing, mirror the plan tasks into the session todo list and keep them in lockstep with plan.md checkboxes.
 Project context lives in conductor/: product.md, product-guidelines.md, tech-stack.md, workflow.md.
 </conductor-context>
 ```
 
 It is a pure file read with no dependencies (`node` only), prints nothing outside conductor projects, and never blocks the session. Disable it by disabling the plugin's hook in ZCode settings.
+
+## Linked with ZCode's session todos
+
+Conductor's ground truth is the track's `plan.md` checkboxes; ZCode's session todos are the working plan rendered in the UI. There is no file-level todo store to sync against, so this plugin wires the two together behaviorally — the `/conductor:implement` command and the router skill instruct the agent to:
+
+1. mirror every pending `- [ ]` plan task into the session todo list (in plan order) before starting,
+2. mark a todo completed at the same moment its checkbox flips to `[x]` in `plan.md`,
+3. add todos for phases appended later (e.g. a review's `Review Fixes` phase).
+
+Result: during implementation the UI's task list is a live view of the conductor plan, and `plan.md` remains the portable source of truth for other tools and teammates. The hook's session-start line reminds the agent of the rule whenever a track has pending tasks.
 
 ## Prerequisites
 

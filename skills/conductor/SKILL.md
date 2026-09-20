@@ -26,3 +26,4 @@ You are the Conductor dispatcher. Conductor manages work as a strict lifecycle: 
 - Ambiguous between starting something new and continuing existing work → check `conductor/tracks.md`: if an in-progress `[~]` or pending `[ ]` track exists, ask one question with the concrete options before choosing.
 - Never jump straight to implementation: a track needs an approved `plan.md` first (setup and new-track own that gate).
 - Pass the user's own words to the protocol skill as its input; do not paraphrase away details.
+- When the routing lands on implementation (directly or via new-track's handoff), mirror the plan's `- [ ]` tasks into the session todo list in plan order and keep the todos in lockstep with plan.md checkboxes for the rest of the session: a todo is completed exactly when its checkbox flips to `[x]`.

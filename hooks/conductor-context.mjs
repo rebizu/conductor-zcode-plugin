@@ -30,6 +30,7 @@ try {
   const inProgress = tracks.filter((t) => t.state === "~").length;
   // Prefer a track already in progress; otherwise the next one not started.
   const active = tracks.find((t) => t.state === "~") ?? tracks.find((t) => t.state === " ");
+  let pendingPlanTasks = false;
 
   const out = [];
   out.push('<conductor-context source="conductor/tracks.md">');
@@ -42,8 +43,13 @@ try {
     out.push(
       `Active track: "${clip(active.desc, 90)}" (${active.state === "~" ? "in progress" : "not started"}).`,
     );
-    appendPlanSummary(out, registryPath, active);
+    pendingPlanTasks = appendPlanSummary(out, registryPath, active) > 0;
     out.push('Continue with /conductor:implement, overview with /conductor:status.');
+    if (pendingPlanTasks) {
+      out.push(
+        'While implementing, mirror the plan tasks into the session todo list and keep them in lockstep with plan.md checkboxes.',
+      );
+    }
   } else {
     out.push('All tracks complete. Start a new one with /conductor:new-track "description".');
   }
@@ -59,18 +65,20 @@ try {
 // Best-effort pending-task count from the active track's plan.md. The
 // implement protocol does not pin the plan's task syntax, so treat any
 // missing or unexpected file as "no detail" rather than an error.
+// Returns the number of pending tasks found (0 when unknown).
 function appendPlanSummary(out, registryPath, track) {
-  if (!track.link) return;
+  if (!track.link) return 0;
   const trackDir = dirname(resolve(dirname(registryPath), track.link));
   const planPath = join(trackDir, "plan.md");
-  if (!existsSync(planPath)) return;
+  if (!existsSync(planPath)) return 0;
   const plan = readFileSync(planPath, "utf8");
   const pending = [...plan.matchAll(/^\s*[-*] \[ \] (.+)$/gm)].map((x) => x[1].trim());
-  if (pending.length === 0) return;
+  if (pending.length === 0) return 0;
   const done = [...plan.matchAll(/^\s*[-*] \[[x~]\]/gm)].length;
   out.push(
     `Next task: ${clip(pending[0], 90)} (${pending.length} of ${pending.length + done} plan tasks pending).`,
   );
+  return pending.length;
 }
 
 function clip(text, max) {
