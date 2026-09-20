@@ -1,0 +1,12 @@
+{
+  "name": "conductor-local",
+  "description": "Local marketplace for the conductor ZCode plugin",
+  "plugins": [
+    {
+      "name": "conductor",
+      "source": ".",
+      "description": "Conductor Spec-Driven Development skills for ZCode",
+      "version": "0.1.0"
+    }
+  ]
+}
