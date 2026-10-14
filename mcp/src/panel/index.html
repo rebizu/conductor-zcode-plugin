@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conductor</title>
+<style>
+{{CSS}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="banner" id="banner"></div>
+
+  <div class="docktabs" role="tablist" aria-label="Conductor views">
+    <button class="docktab" id="tab-conductor" role="tab" type="button" aria-selected="true" data-tab="conductor" aria-controls="view-conductor">Conductor</button>
+    <button class="docktab" id="tab-timeline" role="tab" type="button" aria-selected="false" data-tab="timeline" aria-controls="view-timeline">Timeline</button>
+    <button class="docktab" id="tab-architecture" role="tab" type="button" aria-selected="false" data-tab="architecture" aria-controls="view-architecture">Architecture<span class="tabcount" id="tabArchCount" hidden>0</span></button>
+    <button class="docktab" id="tab-todos" role="tab" type="button" aria-selected="false" data-tab="todos" aria-controls="view-todos">Todos<span class="tabcount" id="tabTodosCount" hidden>0</span></button>
+    <button class="docktab" id="refreshBtn" type="button" title="Refresh" aria-label="Refresh" style="margin-left:auto">Refresh</button>
+  </div>
+
+  <div class="view" id="view-conductor" role="tabpanel" aria-labelledby="tab-conductor">
+    <div class="panelhead">
+      <span class="health" id="health"></span>
+      <button class="newtrack" id="newtrack" type="button" title="Create a track — interview + draft via conductor-new-track">New track</button>
+    </div>
+    <div class="summary" id="summary"></div>
+
+    <div class="newdraft" id="newdraft" hidden>
+      <div class="newdraft-head">New track<button class="newdraft-close" id="draft-close" type="button" aria-label="Close"></button></div>
+      <input type="text" id="draft-idea" placeholder="What should the track do? e.g. Order tracking page" aria-label="Track idea">
+      <div class="newdraft-types" id="draft-types" role="group" aria-label="Track type">
+        <button class="typechip is-on" type="button" data-type="Feature">Feature</button>
+        <button class="typechip" type="button" data-type="Bug">Bug</button>
+        <button class="typechip" type="button" data-type="Chore">Chore</button>
+      </div>
+      <div class="newdraft-hint">ZCode interviews you in chat, then drafts <code>spec.md</code> + <code>plan.md</code> — nothing lands until you approve the plan.</div>
+      <button class="primary" id="draft-go" type="button"><span>Draft spec &amp; plan</span></button>
+    </div>
+
+    <div class="section">Tracks · conductor/tracks.md</div>
+    <div class="tracklist" id="tracklist"></div>
+    <div id="detail"></div>
+
+    <div class="actions">
+      <button class="primary" id="primaryBtn" type="button"><span id="primaryLabel">Implement next task</span></button>
+      <button class="ghosticon" id="btnReview" type="button" title="conductor:review — principal-engineer review" aria-label="Review"></button>
+      <button class="ghosticon" id="btnHandoff" type="button" title="conductor:handoff — snapshot session state" aria-label="Handoff"></button>
+      <button class="ghosticon" id="btnRevert" type="button" title="conductor:revert — git-aware revert" aria-label="Revert"></button>
+    </div>
+  </div>
+
+  <div class="view" id="view-timeline" role="tabpanel" aria-labelledby="tab-timeline" hidden>
+    <div class="tlwrap">
+      <div class="tlmeta">
+        <span class="vel" id="velIcon"></span>
+        <span>Commit dates from plan.md SHAs, one lane per track</span>
+            <span class="tllegend">
+              <span class="lg"><span class="lg-swatch lg-done"></span>track activity</span>
+              <span class="lg"><span class="lg-swatch lg-commit"></span>task</span>
+              <span class="lg"><span class="lg-swatch lg-hand"></span>handoff</span>
+            </span>
+      </div>
+      <div class="tl" id="timeline" role="img" aria-label="Track timeline, one lane per track"></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-architecture" role="tabpanel" aria-labelledby="tab-architecture" hidden>
+    <div class="archwrap" id="architecture"></div>
+  </div>
+
+  <div class="view" id="view-todos" role="tabpanel" aria-labelledby="tab-todos" hidden>
+    <div id="todos"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+{{JS}}
+</script>
+</body>
+</html>
