@@ -42,7 +42,7 @@ const state = {
   detail: null,
   detailTab: "plan", // plan | spec
   openThread: null,
-  openDiff: null,
+  openDiff: null, // '<track>:<phaseIdx>:<taskIdx>' — only the clicked row opens
   diffs: {},
   timeline: null,
   timelineLoaded: false,
@@ -292,7 +292,7 @@ function diffHtml(d) {
     .join("\n");
   return `<div class="diffbox"><div class="diffmsg">${esc(d.message)}</div><pre class="diff">${body}</pre>` +
     (d.truncated ? '<div class="diffcut muted">diff truncated — view the full commit in git</div>' : "") +
-    `<div class="diffact"><button class="cmtbtn" type="button" data-revert-task="${esc(d.sha)}" data-label="commit ${d.sha.slice(0, 7)}">Revert this task</button><span class="muted" style="font-size:10.5px;align-self:center">hands a conductor-revert prompt to the chat</span></div></div>`;
+    "</div>";
 }
 
 function diffRowHtml(task) {
@@ -315,6 +315,7 @@ function planTree(detail) {
       const tasks = p.tasks
         .map((task, ti) => {
           const key = `${detail.id}:${pi}:${ti}`;
+          const diffKey = `plan:${key}`;
           const th = threads[key];
           let bubble;
           if (th && th.state === "resolved")
@@ -323,7 +324,7 @@ function planTree(detail) {
             bubble = `<button class="cbubble has" type="button" data-thread="${key}" title="${th.entries.length} comment(s) — comments.md">${th.entries.length}</button>`;
           else bubble = `<button class="cbubble" type="button" data-thread="${key}" title="Add comment — comments.md">+</button>`;
           const meta = task.sha
-            ? `<button class="sha" type="button" data-sha="${task.sha}" title="Show diff for ${task.sha.slice(0, 7)}">${task.sha.slice(0, 7)}</button>`
+            ? `<button class="sha" type="button" data-sha="${task.sha}" data-diff-key="${diffKey}" title="Show diff for ${task.sha.slice(0, 7)}">${task.sha.slice(0, 7)}</button>`
             : "";
           const now = task.state === "active" && !task.subtask ? '<span class="nowchip">now</span>' : "";
           const openHere = state.openThread === key;
@@ -332,7 +333,7 @@ function planTree(detail) {
             : openHere
               ? threadHtml(key, { state: "open", entries: [] })
               : "";
-          const diffRow = state.openDiff === task.sha ? diffRowHtml(task) : "";
+          const diffRow = state.openDiff === diffKey ? diffRowHtml(task) : "";
           return `<li class="task t-${task.state}${task.subtask ? " sub" : ""}"><span class="cb"></span><span class="tasklabel">${esc(task.label)}</span>${meta}${now}${bubble}</li>${thread}${diffRow}`;
         })
         .join("");
@@ -570,7 +571,7 @@ function renderAll() {
 // ------------------------------------------------------------------- events
 
 document.body.addEventListener("click", async (e) => {
-  const el = e.target.closest("[data-track],[data-tab],[data-dtab],[data-thread],[data-reply],[data-resolve],[data-action],[data-plan],[data-dismiss],[data-sha],[data-revert-task]");
+  const el = e.target.closest("[data-track],[data-tab],[data-dtab],[data-thread],[data-reply],[data-resolve],[data-action],[data-plan],[data-dismiss],[data-sha]");
   if (!el) return;
   try {
     if (el.hasAttribute("data-plan") || el.hasAttribute("data-dismiss")) {
@@ -598,9 +599,10 @@ document.body.addEventListener("click", async (e) => {
       renderAll();
     } else if (el.hasAttribute("data-sha")) {
       const sha = el.getAttribute("data-sha");
-      state.openDiff = state.openDiff === sha ? null : sha;
+      const diffKey = el.getAttribute("data-diff-key");
+      state.openDiff = state.openDiff === diffKey ? null : diffKey;
       renderDetail();
-      if (state.openDiff === sha && !state.diffs[sha]) {
+      if (state.openDiff === diffKey && !state.diffs[sha]) {
         try {
           state.diffs[sha] = await callTool("get_task_diff", { trackId: state.selected, sha });
         } catch (err) {
@@ -608,15 +610,6 @@ document.body.addEventListener("click", async (e) => {
         }
         renderDetail();
       }
-      return;
-    } else if (el.hasAttribute("data-revert-task")) {
-      const data = await callTool("request_action", {
-        action: "revert_task",
-        trackId: state.selected,
-        sha: el.getAttribute("data-revert-task"),
-        label: el.getAttribute("data-label") || undefined,
-      });
-      await sendPrompt(data.prompt);
       return;
     } else if (el.hasAttribute("data-thread")) {
       const key = el.getAttribute("data-thread");

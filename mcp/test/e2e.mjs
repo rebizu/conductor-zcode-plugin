@@ -258,17 +258,7 @@ try {
       .content[0].text,
   );
   assert.ok(bad.error, "unknown sha errors cleanly");
-  const rt = JSON.parse(
-    (
-      await rpc.request("tools/call", {
-        name: "request_action",
-        arguments: { action: "revert_task", trackId: "002_mcp-panel", sha: shaTask, label: "Serve panel resource" },
-      })
-    ).content[0].text,
-  );
-  assert.match(rt.prompt, /conductor-revert/);
-  assert.match(rt.prompt, /Serve panel resource/);
-  ok("task diff: git show + clean errors + revert hand-off prompt");
+  ok("task diff: git show + clean errors on unknown sha");
   // archived tracks: in timeline + changelog, out of the planning list
   assert.equal(lt.tracks.filter((x) => x.id === "000_old_thing").length, 0, "archived not in planning list");
   const archivedLane = tl.lanes.find((l) => l.id === "000_old_thing");

@@ -28439,14 +28439,12 @@ j(
   "request_action",
   {
     title: "Build a chat prompt for a conductor action",
-    description: "Returns the exact chat prompt that hands the requested action (implement/review/revert/revert-task/handoff/new track/setup/architecture candidate) to the conductor skills. The panel sends it to the conversation.",
+    description: "Returns the exact chat prompt that hands the requested action (implement/review/revert/handoff/new track/setup/architecture candidate) to the conductor skills. The panel sends it to the conversation.",
     inputSchema: {
-      action: external_exports.enum([...Object.keys(ACTIONS), "architecture_plan", "architecture_dismiss", "revert_task"]),
+      action: external_exports.enum([...Object.keys(ACTIONS), "architecture_plan", "architecture_dismiss"]),
       trackId: external_exports.string().optional(),
       idea: external_exports.string().optional(),
-      candidateId: external_exports.string().optional(),
-      sha: external_exports.string().optional(),
-      label: external_exports.string().optional()
+      candidateId: external_exports.string().optional()
     },
     _meta: APP_ONLY
   },
@@ -28457,15 +28455,6 @@ j(
       const c = candidates.find((x) => x.id === candidateId);
       if (!c) return jsonError(`No candidate '${candidateId}' in ${ARCH_FILE}`);
       return jsonText({ action, prompt: candidatePrompt(c, action === "architecture_plan" ? "plan" : "dismiss") });
-    }
-    if (action === "revert_task") {
-      if (!trackId || !sha) return jsonError("revert_task needs trackId and sha");
-      const r = resolveTrack(trackId);
-      if (r.error) return jsonError(r.error);
-      return jsonText({
-        action,
-        prompt: `Revert the task "${label || sha}" from track ${trackId} \u2014 its commit is ${sha}. Use the conductor-revert flow to revert exactly that unit of work and update plan.md accordingly.`
-      });
     }
     if (trackId && action !== "new_track" && action !== "setup") {
       const r = resolveTrack(trackId);

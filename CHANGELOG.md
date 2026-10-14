@@ -7,10 +7,10 @@ independently; the upstream version it was ported from is noted in the README.
 
 **Click a commit hash, see the diff:** every completed task's SHA in the plan
 tree is now a button — clicking loads that commit's `git show` (message +
-patch, ±/hunk coloring, capped at 64 KiB with a truncation note) inline under
-the task. A "Revert this task" action in the diff footer hands a scoped
-`conductor-revert` prompt to the conversation — the panel still never changes
-anything itself.
+patch, ±/hunk coloring, capped at 64 KiB with a truncation note) inline,
+**only under the clicked task** — tasks sharing one batch commit SHA no
+longer all sprout loading rows. Clicking shows just the diff; reverts stay in
+the conductor-revert skill.
 
 ## 0.11.0 — 2026-10-13
 
