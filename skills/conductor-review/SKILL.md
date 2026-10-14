@@ -216,6 +216,7 @@ Before starting the review process, you MUST locate and read the project's found
     -   **TodoWrite Mirror:** rebuild the session todo list from the updated `plan.md` (complete list, statuses mapped; open review tasks are `pending`).
     -   **Registry Sync:** if open review tasks were added while the Tracks Registry shows the track `[x]`, set it back to `[~]` — the track has follow-up work again, so `/conductor:next` and `/conductor:implement` will route to it.
     -   **Commit (Track as Review Tasks path only):** stage `plan.md` and the registry, commit `conductor(plan): Record review findings as tasks for track '<track_name>'`. In the Apply Fixes path the tasks are committed together with the fixes in section 3.2.
+    -   **Placement:** the `## Review Fixes` phase goes at the END of `plan.md`, after the last phase's checkpoint task — never between phases. Anchor the insertion on the final phase's checkpoint line and the end of file.
     -   **Announce:** the tasks are visible in the panel's plan tree and todo mirror.
     -   Proceed to section 3.2 (Apply Fixes path) or 3.3 (all other paths).
 

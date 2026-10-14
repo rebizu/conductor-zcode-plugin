@@ -1,6 +1,6 @@
 {
   "name": "conductor",
-  "version": "0.12.0",
+  "version": "0.15.0",
   "description": "Conductor for ZCode: Spec-Driven Development. Sets up project context (product, guidelines, tech stack, workflow), plans work as tracks (spec.md + plan.md), implements tracks phase by phase with ZCode todo-list integration and an approval-gated plan-amendment protocol, adds next, status, review, git-aware revert and architecture-review commands, writes session handoff notes so a fresh session can resume an in-progress track exactly where it stopped, and ships a live Conductor panel (MCP App) with registry overview, plan tree, comments, timeline and todos.",
   "author": {
     "name": "gemini-cli-extensions",

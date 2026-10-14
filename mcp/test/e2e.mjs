@@ -111,7 +111,7 @@ fs.writeFileSync(
 fs.writeFileSync(path.join(cond, "tracks/001_sdd-core/plan.md"), plan([["x", "Read registry", shaTask], ["x", "Parse plan tree", shaTask], ["x", "Docs follow-up", "deadbeefdeadbeefdeadbeef"]]));
 fs.writeFileSync(
   path.join(cond, "tracks/002_mcp-panel/plan.md"),
-  plan([["x", "Serve panel resource", shaTask], ["~", "Write panel shell", null], [" ", "Subscribe to updates", null]]),
+  plan([["x", "Serve panel resource", shaTask], ["~", "Write panel shell", null], [" ", "Subscribe to updates", null], ["!", "Blocked: waiting on API creds", null]]),
 );
 assert.equal(git(["add", "-A"]).status, 0);
 assert.equal(git(["commit", "-qm", "chore(conductor): plans"]).status, 0, "git commit 2");
@@ -187,21 +187,30 @@ try {
   });
   assert.equal(init.serverInfo.name, "conductor");
   ok("initialize handshake");
+
+  // version: build version, manifest version, workspace binding
+  const ver = JSON.parse((await rpc.request("tools/call", { name: "get_version", arguments: {} })).content[0].text);
+  assert.equal(ver.pluginVersion, "0.15.0");
+  assert.equal(ver.buildVersion, "0.15.0");
+  assert.equal(ver.cwd, fixture);
+  assert.equal(ver.conductorDir, path.join(fixture, "conductor"));
+  ok("get_version: plugin + build version, workspace binding");
   rpc.notify("notifications/initialized", {});
 
   const tools = await rpc.request("tools/list", {});
   const names = tools.tools.map((t) => t.name).sort();
-  assert.deepEqual(names, ["add_comment", "get_architecture_review", "get_changelog", "get_task_diff", "get_track", "list_tracks", "request_action", "resolve_comment", "set_candidate_disposition", "timeline"]);
-  ok("tools/list: 10 tools");
+  assert.deepEqual(names, ["add_comment", "get_architecture_review", "get_changelog", "get_task_diff", "get_track", "get_version", "list_archived", "list_tracks", "request_action", "resolve_comment", "set_candidate_disposition", "timeline"]);
+  ok("tools/list: 12 tools");
 
   // list_tracks
   const lt = JSON.parse((await rpc.request("tools/call", { name: "list_tracks", arguments: {} })).content[0].text);
   assert.equal(lt.tracks.length, 2);
-  assert.equal(lt.summary.total, 6);
+  assert.equal(lt.summary.total, 7);
   assert.equal(lt.summary.done, 4);
   const t2 = lt.tracks.find((t) => t.id === "002_mcp-panel");
   assert.equal(t2.status, "active");
   assert.equal(t2.hasHandoff, true);
+  assert.equal(t2.blocked, 1, "blocked task counted");
   assert.match(t2.handoffWritten, /2026-10-12 18:42/);
   ok("list_tracks: registry parsed, counts + handoff");
 
@@ -210,12 +219,15 @@ try {
     (await rpc.request("tools/call", { name: "get_track", arguments: { trackId: "002_mcp-panel" } })).content[0].text,
   );
   assert.equal(gt.plan.length, 1);
-  assert.equal(gt.plan[0].tasks.length, 3);
+  assert.equal(gt.plan[0].tasks.length, 4);
   assert.equal(gt.plan[0].tasks[0].sha, shaTask);
+  assert.equal(gt.plan[0].tasks[3].state, "blocked", "[!] parses as blocked");
   assert.equal(gt.plan[0].tasks[1].state, "active");
   assert.equal(gt.handoff.resumeTask, "Write panel shell");
   assert.equal(gt.comments.length, 0);
   assert.match(gt.spec.text, /# Spec — MCP panel/);
+  assert.match(gt.handoff.text, /## Resume pointer/);
+  assert.match(gt.handoff.text, /Write panel shell/);
   ok("get_track: plan tree, sha, handoff, spec");
 
   // timeline
@@ -244,6 +256,22 @@ try {
   const archivedEntry = cl.entries.find((e) => e.trackId === "000_old_thing");
   assert.ok(archivedEntry && archivedEntry.synthesized, "archived track synthesized into changelog");
   ok("changelog: explicit + synthesized done + archived tracks, sorted");
+
+  // archived browsing + archive action
+  const la = JSON.parse((await rpc.request("tools/call", { name: "list_archived", arguments: {} })).content[0].text);
+  assert.equal(la.tracks.length, 1);
+  assert.equal(la.tracks[0].id, "000_old_thing");
+  assert.equal(la.tracks[0].done, 1);
+  assert.ok(la.tracks[0].lastIso, "archived track dated from git");
+  const at = JSON.parse((await rpc.request("tools/call", { name: "get_track", arguments: { trackId: "000_old_thing" } })).content[0].text);
+  assert.match(at.plan[0].tasks[0].label, /Do the old thing/);
+  const arq = JSON.parse(
+    (await rpc.request("tools/call", { name: "request_action", arguments: { action: "archive_track", trackId: "002_mcp-panel" } }))
+      .content[0].text,
+  );
+  assert.match(arq.prompt, /conductor\/archive\/002_mcp-panel/);
+  assert.match(arq.prompt, /conductor\/tracks\.md/);
+  ok("archive: list_archived + get_track + archive_track prompt");
 
   // task diff + revert-task prompt
   const gd = JSON.parse(

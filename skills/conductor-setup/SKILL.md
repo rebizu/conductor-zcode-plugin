@@ -55,6 +55,15 @@ Read the returned JSON object from `stdout`. **Do NOT mention the script name or
 - If partial setup exists, present a clean summary of what is complete and what is missing using human-readable artifact names (e.g., `tech-stack.md`). Do NOT use internal section numbers (e.g., avoid "Section 2.3").
 - Identify the pending step from `next_step` (e.g., "Technology Stack") and advise that setup can be resumed from there.
 
+**Workflow Template Conformance (after the resumption check):**
+
+If `conductor/workflow.md` exists, compare it against the bundled template (`<skill_dir>/assets/workflow.md`) so projects scaffolded from older templates get the current protocol. Check, by heading text (case-insensitive):
+
+1.  These template sections exist in the project's copy: `### Standard Task Workflow`, `### Task Correction & Plan Amendment Workflows`, `### Phase Completion Verification and Checkpointing Protocol`, `### Quality Gates`.
+2.  If `### Standard Task Workflow` exists, it contains the **Get and Record Task Commit SHA** step (older copies lack it — that is why completed tasks end up without commit SHAs, which blinds the panel timeline and per-task revert).
+
+Present anything missing and ask via a **Yes/No question** whether to fix it: append missing sections verbatim from the template (at the end of the file, never rewriting or deleting existing project content), and/or insert the missing SHA-recording step after the commit step of the Standard Task Workflow. If everything is present, say nothing about it.
+
 ## 2. Interactive Scaffolding & Context Gathering
 
 Before any action or resumption jump, you MUST determine the project's maturity

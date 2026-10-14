@@ -3,6 +3,68 @@
 All notable changes to the Conductor for ZCode plugin. This plugin versions
 independently; the upstream version it was ported from is noted in the README.
 
+## 0.15.0 — 2026-10-14
+
+**Visible version + handoffs in the panel:**
+
+- The panel header shows a version chip for the **installed plugin**
+  (`v0.15.0`) plus the workspace the server is bound to (tooltip). A new
+  `get_version` tool reports the plugin version, the running server's build
+  version, and the workspace — and the chip warns when they disagree, the
+  signature of a stale install.
+- **handoff.md tab** in the track detail: the full session handoff — resume
+  pointer, working state, decisions, gotchas, dead ends — rendered as
+  markdown, not just the one-line resume banner.
+- Blocked tasks surface in the track list as a red `N blocked` chip,
+  completing the `[!]` loop.
+- **Archive tab + archive action:** browse `conductor/archive/` tracks (with
+  their plans and specs), and archive a completed track from the panel — the
+  action hands the review-cleanup move to the conversation.
+- **History feed:** the Timeline tab now ends with a unified chronological
+  feed — starts, completions, handoffs and shipped summaries in date order —
+  so what went before what is readable at a glance instead of buried in bar
+  geometry.
+
+## 0.14.0 — 2026-10-14
+
+**Make the protocol self-enforcing:**
+
+- **Auto-checkpoint handoffs:** the implement loop now updates the resume
+  pointer in `handoff.md` in the same commit as every plan checkbox change
+  (`[~]` flip and `[x]`+SHA completion). A crashed session can no longer lose
+  the resume state; Decisions/Gotchas sections stay untouched, and the full
+  `/conductor:handoff` ceremony still owns the file.
+- **Blockers (`[!]`):** a checkbox convention for blocked tasks. The panel
+  renders them with a red chip; `/conductor:status` reports them;
+  `/conductor:next` never resumes straight into one — it offers unblocking,
+  skipping, or switching tracks; `implement` pauses at a blocked task instead
+  of working around it silently.
+- **Router hardening:** `continue` and `/conductor:next` explicitly require
+  invoking the target skill's full protocol from step 1 — the router itself
+  never implements, skips handshakes, or edits plans.
+- **Workflow-template conformance check** (`conductor-setup`): after the
+  resumption check, the project's `workflow.md` is compared against the
+  bundled template — missing sections (Amendment workflows, Checkpoint
+  protocol, Quality Gates) and the missing **Record Task Commit SHA** step
+  are flagged and offered as verbatim appends. This catches the template
+  drift that left completed tasks without commit SHAs.
+
+## 0.13.0 — 2026-10-14
+
+**Step discipline that agents skipped in real use:**
+
+- **Task boundary discipline** in `conductor-implement` (mandatory, in
+  order): `[~]` flip before any code work; `[x]` + 7-char SHA on completion
+  with a separate plan commit; the full Phase Checkpoint Checklist (coverage,
+  tests, user-verified, git-notes report, `[checkpoint: <sha>]` heading
+  marker) for phase-ending tasks; the todo mirror may never read `completed`
+  against an open checkbox.
+- **Plan-file edit rule:** anchor plan edits on unique context — phase
+  heading plus full task text — after generic anchors inserted sections into
+  the wrong phase.
+- **Review Fixes placement rule:** the `## Review Fixes` phase always goes at
+  the END of `plan.md`, anchored on the final checkpoint line.
+
 ## 0.12.0 — 2026-10-13
 
 **Click a commit hash, see the diff:** every completed task's SHA in the plan

@@ -27900,6 +27900,7 @@ import path from "node:path";
 import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
 var DIST_DIR = path.dirname(fileURLToPath(import.meta.url));
+var VERSION = true ? "0.15.0" : "dev";
 var PANEL_URI = "ui://conductor/panel.html";
 var CONDUCTOR_DIR = path.join(process.cwd(), "conductor");
 var TRACKS_DIR = path.join(CONDUCTOR_DIR, "tracks");
@@ -27918,7 +27919,7 @@ var jsonError = (message) => ({
   isError: true,
   content: [{ type: "text", text: JSON.stringify({ error: message }) }]
 });
-var statusOf = (marker) => marker.toLowerCase() === "x" ? "done" : marker === "~" ? "active" : "planned";
+var statusOf = (marker) => marker.toLowerCase() === "x" ? "done" : marker === "~" ? "active" : marker === "!" ? "blocked" : "planned";
 var fmtWhen = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
   d.getDate()
 ).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(
@@ -28003,7 +28004,7 @@ function parsePlan(md) {
       phases.push(current);
       continue;
     }
-    const t = line.match(/^(\s*)[-*]\s+\[([ xX~])\]\s+(.+?)\s*$/);
+    const t = line.match(/^(\s*)[-*]\s+\[([ xX~!])\]\s+(.+?)\s*$/);
     if (t && current) {
       const label = t[3].replace(/^Task:\s*/i, "");
       const sha = (t[3].match(/`([0-9a-f]{7,40})`/) || [])[1] || null;
@@ -28032,7 +28033,8 @@ function parseHandoff(md, stat) {
   return {
     written,
     resumeTask: resume,
-    modifiedIso: stat ? stat.mtime.toISOString() : null
+    modifiedIso: stat ? stat.mtime.toISOString() : null,
+    text: md.length > 32e3 ? md.slice(0, 32e3) + "\n\u2026 truncated" : md
   };
 }
 function parseComments(md) {
@@ -28087,6 +28089,7 @@ function readTrackSummary(t) {
     phases: plan.length,
     done: tasks.filter((x) => x.state === "done").length,
     total: tasks.length,
+    blocked: tasks.filter((x) => x.state === "blocked").length,
     hasHandoff: !!handoff,
     handoffWritten: handoff?.written || null,
     meta: meta3
@@ -28222,7 +28225,7 @@ function parseChangelog(md) {
   }
   return entries;
 }
-var server = new McpServer({ name: "conductor", version: "0.6.0" });
+var server = new McpServer({ name: "conductor", version: VERSION });
 var UI_META = { ui: { resourceUri: PANEL_URI } };
 var APP_ONLY = { ui: { resourceUri: PANEL_URI, visibility: ["app"] } };
 if (!fs.existsSync(CONDUCTOR_DIR)) {
@@ -28406,6 +28409,51 @@ function candidatePrompt(c, mode) {
 }
 j(
   server,
+  "get_version",
+  {
+    title: "Get conductor version",
+    description: "The installed plugin's version, the running MCP server's build version, and the workspace it is bound to. Plugin and build versions disagreeing means the install is stale \u2014 update the plugin.",
+    inputSchema: {},
+    _meta: APP_ONLY
+  },
+  async () => {
+    let pluginVersion = null;
+    try {
+      pluginVersion = JSON.parse(readText(path.join(DIST_DIR, "..", "..", ".zcode-plugin", "plugin.json")) || "null")?.version || null;
+    } catch {
+    }
+    return jsonText({ pluginVersion, buildVersion: VERSION, cwd: process.cwd(), conductorDir: CONDUCTOR_DIR });
+  }
+);
+j(
+  server,
+  "list_archived",
+  {
+    title: "List archived tracks",
+    description: "Tracks moved to conductor/archive/ \u2014 shipped history, always complete. Use get_track with the id to read one.",
+    inputSchema: {},
+    _meta: APP_ONLY
+  },
+  async () => {
+    if (!fs.existsSync(CONDUCTOR_DIR)) return jsonError("not_initialized");
+    const tracks = [];
+    for (const a of listArchivedTracks()) {
+      const span = await gitTrackSpan(path.relative(process.cwd(), a.dir));
+      tracks.push({
+        id: a.id,
+        description: a.description,
+        done: a.done,
+        total: a.total,
+        firstIso: span?.firstIso || null,
+        lastIso: span?.lastIso || null
+      });
+    }
+    tracks.sort((x, y) => (y.lastIso || "").localeCompare(x.lastIso || ""));
+    return jsonText({ tracks });
+  }
+);
+j(
+  server,
   "get_task_diff",
   {
     title: "Commit diff for a plan task",
@@ -28439,9 +28487,9 @@ j(
   "request_action",
   {
     title: "Build a chat prompt for a conductor action",
-    description: "Returns the exact chat prompt that hands the requested action (implement/review/revert/handoff/new track/setup/architecture candidate) to the conductor skills. The panel sends it to the conversation.",
+    description: "Returns the exact chat prompt that hands the requested action (implement/review/revert/handoff/new track/setup/architecture candidate/archive track) to the conductor skills. The panel sends it to the conversation.",
     inputSchema: {
-      action: external_exports.enum([...Object.keys(ACTIONS), "architecture_plan", "architecture_dismiss"]),
+      action: external_exports.enum([...Object.keys(ACTIONS), "architecture_plan", "architecture_dismiss", "archive_track"]),
       trackId: external_exports.string().optional(),
       idea: external_exports.string().optional(),
       candidateId: external_exports.string().optional()
@@ -28449,6 +28497,15 @@ j(
     _meta: APP_ONLY
   },
   async ({ action, trackId, idea, candidateId, sha, label }) => {
+    if (action === "archive_track") {
+      if (!trackId) return jsonError("archive_track needs trackId");
+      const r = resolveTrack(trackId);
+      if (r.error) return jsonError(r.error);
+      return jsonText({
+        action,
+        prompt: `Archive track ${trackId} ("${r.track.description}"): move conductor/tracks/${trackId} to conductor/archive/${trackId}, remove its entry from conductor/tracks.md, and commit as chore(conductor): Archive track '${r.track.description}'. Follow the review-cleanup archive protocol.`
+      });
+    }
     if (action === "architecture_plan" || action === "architecture_dismiss") {
       const file2 = path.join(CONDUCTOR_DIR, ARCH_FILE);
       const candidates = parseArchitectureReview(readText(file2)) || [];

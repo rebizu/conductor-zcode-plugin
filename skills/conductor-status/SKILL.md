@@ -50,7 +50,7 @@ Follow this sequence to provide a status overview.
 ### 2.2 Parse and Summarize Plan
 1.  **Parse Content:**
     -   Identify major project phases/sections (e.g., top-level markdown headings).
-    -   Identify individual tasks and their current status by looking for checkbox markers: `[x]` for completed, `[~]` for in-progress, and `[ ]` for pending.
+    -   Identify individual tasks and their current status by looking for checkbox markers: `[x]` for completed, `[~]` for in-progress, `[!]` for blocked, and `[ ]` for pending.
 2.  **Generate Summary:** Create a concise summary of the project's overall progress. This should include:
     -   The total number of major phases.
     -   The total number of tasks.
@@ -62,7 +62,7 @@ Follow this sequence to provide a status overview.
     -   **Project Status:** A high-level summary of progress (e.g., "On Track", "Behind Schedule", "Blocked").
     -   **Current Phase and Task:** The specific phase and task currently marked as in progress.
     -   **Next Action Needed:** The next task listed as pending.
-    -   **Blockers:** Any items explicitly marked as blockers in the plan.
+    -   **Blockers:** Any tasks marked `[!]` in `plan.md`, with their blocker reason.
     -   **Session Handoff:** Whether the in-progress track has a `handoff.md` in its track folder and, if so, the date it was written.
     -   **Phases (total):** The total number of major phases.
     -   **Tasks (total):** The total number of tasks.

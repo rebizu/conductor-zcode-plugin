@@ -65,7 +65,7 @@ Adhere to this sequence to identify the track to hand off.
 
 Adhere to this sequence to collect what the note must contain.
 
-1.  **Load Track Plan:** Identify the track folder from the registry to get the `<track_id>` (check the track's `index.md` for links, or use the default path `conductor/tracks/<track_id>/`). Read the track's `plan.md` and identify the current phase and the task marked `[~]` (in progress). If no task is `[~]`, set the resume pointer to the first `[ ]` task.
+1.  **Load Track Plan:** Identify the track folder from the registry to get the `<track_id>` (check the track's `index.md` for links, or use the default path `conductor/tracks/<track_id>/`). Read the track's `plan.md` and identify the current phase and the task marked `[~]` (in progress). If no task is `[~]`, set the resume pointer to the first `[ ]` task. If that task is marked `[!]` (blocked), say so in the **Next concrete action** (e.g. "blocked on X — unblock first").
 
 2.  **Working State:** Run `git branch --show-current` and `git status`. Record the branch name, and for each uncommitted or modified file, its path and — if inferable — why it is dirty (e.g., WIP for the current task, unrelated change). This matters because the next session may start on a dirty tree and must not misread WIP as its own.
 

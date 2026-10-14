@@ -10,6 +10,7 @@ const dist = path.join(root, "dist");
 fs.mkdirSync(dist, { recursive: true });
 
 // 1. server — bundle everything (SDK + zod) into one ESM file
+const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf-8"));
 await esbuild.build({
   entryPoints: [path.join(root, "src/server.mjs")],
   bundle: true,
@@ -19,6 +20,7 @@ await esbuild.build({
   outfile: path.join(dist, "server.mjs"),
   sourcemap: false,
   logLevel: "info",
+  define: { __CONDUCTOR_VERSION__: JSON.stringify(pkg.version) },
   banner: {
     // esbuild-bundled deps may use import.meta.url / createRequire patterns
     js: `import { createRequire as __crc } from "node:module"; const require = __crc(import.meta.url);`,

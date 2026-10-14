@@ -85,14 +85,22 @@ Adhere to this sequence to execute the selected track.
     -   **Status mapping:** `[ ]` → `pending`, `[~]` → `in_progress`, `[x]` → `completed`.
     -   **Rules:** Keep exactly one entry `in_progress` at a time (the task you are actively working on). `TodoWrite` replaces the whole list, so always send the complete list including already completed entries. If the list currently holds another track's todos, replace it with this track's.
     -   The todo list is a **live mirror**, not the source of truth: `plan.md` always remains the durable record. If the `TodoWrite` tool is unavailable, skip this protocol silently.
+    -   **Plan-file edit rule:** anchor edits on unique context — the phase heading plus the full task text. Task lines repeat verbatim across phases; generic anchors have inserted sections into the wrong phase.
 
 5.  **Execute Tasks and Update Track Plan:**
+    -   **Task boundary discipline (mandatory, in order):**
+        -   **a. Before ANY code work on a task:** flip its checkbox to `[~]` in `plan.md`. The flip must exist before the first commit of the task's work.
+        -   **b. On completion:** set `[x]` and append the 7-char commit SHA to the same line, then commit `plan.md` separately from the code.
+        -   **c. If the task ends a phase,** run the Phase Checkpoint Checklist: verify coverage; run tests; propose manual verification and WAIT for the user's answer; attach the verification report via git notes to the phase's last functional commit; add `[checkpoint: <sha>]` to the phase HEADING line; tick the checkpoint task with that SHA; commit as `conductor(plan): Mark phase '<PHASE>' as complete`.
+        -   **d. The todo mirror may never read `completed` while the `plan.md` checkbox is open** — `plan.md` wins; re-sync the mirror before proceeding.
+    -   **Blocked tasks (`[!]`):** if the next task in order is marked `[!]`, stop before it and announce the blocker. Ask via **AskUserQuestion**: unblock it now (work on the blocker as the next task), skip to the next unblocked task (the blocked one stays open), or halt. Never silently work around a blocker.
     -   Loop through each task in the track's **Implementation Plan** one by one, in order.
     -   **Before starting each task:** set its todo entry to `in_progress` (send the full list with this one change).
     -   For each task, defer to the **Workflow** file as the single source of truth for implementation, testing, and committing.
     -   **After completing each task** (checkbox ticked `[x]` in `plan.md` and plan-update committed per the Workflow): mark its todo entry `completed` and set the next task's entry `in_progress` in the same `TodoWrite` call.
     -   Ensure every human-in-the-loop interaction mentioned in the **Workflow** is conducted using appropriate question types (Yes/No, open question, or multiple-choice via `AskUserQuestion`).
     -   **On resume after an interruption:** rebuild the todo list from the current `plan.md` checkbox states before continuing, so the todo panel matches reality.
+    -   **Auto-checkpoint handoff:** whenever a `plan.md` checkbox change is committed in the loop (the `[~]` flip and the `[x]`+SHA completion), update the resume pointer in `conductor/tracks/<track_id>/handoff.md` **in the same commit**. If the file is absent, create it with the handoff template's header and a Resume pointer section; if present, rewrite ONLY the Resume pointer section (Phase / Task / Next concrete action — leave Decisions, Gotchas and Dead ends untouched) and aim it at the current or next open task. This checkpoint is automatic and minimal — the `/conductor:handoff` ceremony still owns the rest of the file, and the Finalize step's stale-handoff deletion still applies.
 
 6.  **Plan Amendments (Mid-Implementation Changes):**
     -   **Trigger:** While executing a task, you may discover missing prerequisite work, a blocked task needing a detour fix, a flawed task decomposition, or scope drift (the spec was incomplete or wrong). NEVER improvise silent edits to `plan.md` — the plan is the source of truth, so changing it is a controlled, user-approved step.

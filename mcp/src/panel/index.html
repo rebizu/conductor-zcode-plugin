@@ -16,6 +16,7 @@
     <button class="docktab" id="tab-conductor" role="tab" type="button" aria-selected="true" data-tab="conductor" aria-controls="view-conductor">Conductor</button>
     <button class="docktab" id="tab-timeline" role="tab" type="button" aria-selected="false" data-tab="timeline" aria-controls="view-timeline">Timeline</button>
     <button class="docktab" id="tab-architecture" role="tab" type="button" aria-selected="false" data-tab="architecture" aria-controls="view-architecture">Architecture<span class="tabcount" id="tabArchCount" hidden>0</span></button>
+    <button class="docktab" id="tab-archive" role="tab" type="button" aria-selected="false" data-tab="archive" aria-controls="view-archive">Archive</button>
     <button class="docktab" id="tab-todos" role="tab" type="button" aria-selected="false" data-tab="todos" aria-controls="view-todos">Todos<span class="tabcount" id="tabTodosCount" hidden>0</span></button>
     <button class="docktab" id="refreshBtn" type="button" title="Refresh" aria-label="Refresh" style="margin-left:auto">Refresh</button>
   </div>
@@ -23,6 +24,7 @@
   <div class="view" id="view-conductor" role="tabpanel" aria-labelledby="tab-conductor">
     <div class="panelhead">
       <span class="health" id="health"></span>
+      <span class="verchip" id="verchip" hidden></span>
       <button class="newtrack" id="newtrack" type="button" title="Create a track — interview + draft via conductor-new-track">New track</button>
     </div>
     <div class="summary" id="summary"></div>
@@ -48,6 +50,7 @@
       <button class="ghosticon" id="btnReview" type="button" title="conductor:review — principal-engineer review" aria-label="Review"></button>
       <button class="ghosticon" id="btnHandoff" type="button" title="conductor:handoff — snapshot session state" aria-label="Handoff"></button>
       <button class="ghosticon" id="btnRevert" type="button" title="conductor:revert — git-aware revert" aria-label="Revert"></button>
+      <button class="ghosticon" id="btnArchive" type="button" title="Archive this completed track (hands the move to the chat)" aria-label="Archive"></button>
     </div>
   </div>
 
@@ -68,6 +71,10 @@
 
   <div class="view" id="view-architecture" role="tabpanel" aria-labelledby="tab-architecture" hidden>
     <div class="archwrap" id="architecture"></div>
+  </div>
+
+  <div class="view" id="view-archive" role="tabpanel" aria-labelledby="tab-archive" hidden>
+    <div class="archwrap" id="archive"></div>
   </div>
 
   <div class="view" id="view-todos" role="tabpanel" aria-labelledby="tab-todos" hidden>

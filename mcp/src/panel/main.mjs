@@ -29,13 +29,14 @@ const ICONS = {
   revert: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
   trending: '<path d="M22 7l-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>',
   layers: '<path d="m12 2 9 4.9-9 4.9-9-4.9z"/><path d="m21 11.4-9 4.9-9-4.9"/><path d="m21 16.2-9 4.9-9-4.9"/>',
+  archive: '<rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
   refresh: '<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',
 };
 const icon = (name) =>
   `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
 
 const state = {
-  view: "conductor", // conductor | timeline | architecture | todos
+  view: "conductor", // conductor | timeline | architecture | archive | todos
   tracks: [],
   summary: null,
   selected: null,
@@ -48,7 +49,9 @@ const state = {
   timelineLoaded: false,
   arch: null,
   changelog: null,
+  archived: null,
   connected: false,
+  version: null,
   initialized: false, // conductor/ present
 };
 
@@ -95,9 +98,9 @@ function readWidgetState(ctx) {
     const ws = ctx?.["zcode/widgetState"];
     const pc = ws?.privateContent;
     if (!pc) return;
-    if (["conductor", "timeline", "architecture", "todos"].includes(pc.view)) state.view = pc.view;
+    if (["conductor", "timeline", "architecture", "archive", "todos"].includes(pc.view)) state.view = pc.view;
     if (pc.selected) state.selected = pc.selected;
-    if (pc.detailTab === "plan" || pc.detailTab === "spec") state.detailTab = pc.detailTab;
+    if (["plan", "spec", "handoff"].includes(pc.detailTab)) state.detailTab = pc.detailTab;
   } catch {
     /* forward-compat: ignore unexpected shapes */
   }
@@ -161,11 +164,27 @@ async function loadArch() {
   }
 }
 
+async function loadArchived() {
+  try {
+    state.archived = await callTool("list_archived");
+  } catch {
+    state.archived = { tracks: [] };
+  }
+}
+
 async function loadChangelog() {
   try {
     state.changelog = await callTool("get_changelog");
   } catch {
     state.changelog = { exists: false, entries: [] };
+  }
+}
+
+async function loadVersion() {
+  try {
+    state.version = await callTool("get_version");
+  } catch {
+    state.version = null;
   }
 }
 
@@ -176,6 +195,7 @@ async function refreshTracks() {
   state.initialized = true;
   await loadArch();
   await loadChangelog();
+  await loadArchived();
   if (!state.selected || !data.tracks.some((t) => t.id === state.selected)) {
     state.selected =
       (data.tracks.find((t) => t.status === "active") || data.tracks.find((t) => t.status === "planned") || data.tracks[0] || {}).id || null;
@@ -231,6 +251,17 @@ function miniBar(t) {
 }
 
 function renderHeader() {
+  const v = state.version;
+  const chip = $("verchip");
+  if (v) {
+    chip.hidden = false;
+    const mismatch = v.buildVersion && v.buildVersion !== v.pluginVersion;
+    chip.textContent = mismatch ? `v${v.pluginVersion} ⚠ server v${v.buildVersion}` : `v${v.pluginVersion}`;
+    chip.classList.toggle("warn", !!mismatch);
+    chip.title = mismatch
+      ? "Installed plugin and running server disagree — the install is stale. Update the plugin."
+      : `Conductor plugin v${v.pluginVersion}\n${v.conductorDir || ""}`;
+  }
   const s = state.summary;
   const total = s ? s.total : 0;
   const done = s ? s.done : 0;
@@ -253,7 +284,7 @@ function renderList() {
     <span class="status s-${t.status}"></span>
     <span class="trackmain"><span class="trackname">${esc(t.id)}</span>
     <span class="trackmeta">${esc(t.description)}</span>${miniBar(t)}</span>
-    <span class="trackside">${chip(t.status)}<span class="trackcount">${t.done}/${t.total}</span>
+    <span class="trackside">${chip(t.status)}${t.blocked ? `<span class="chip c-blocked">${t.blocked} blocked</span>` : ""}<span class="trackcount">${t.done}/${t.total}</span>
     ${t.hasHandoff ? '<span class="handofftag">handoff</span>' : ""}</span></button>`,
     )
     .join("") || '<div class="detail muted">No tracks registered yet.</div>';
@@ -326,7 +357,8 @@ function planTree(detail) {
           const meta = task.sha
             ? `<button class="sha" type="button" data-sha="${task.sha}" data-diff-key="${diffKey}" title="Show diff for ${task.sha.slice(0, 7)}">${task.sha.slice(0, 7)}</button>`
             : "";
-          const now = task.state === "active" && !task.subtask ? '<span class="nowchip">now</span>' : "";
+          const now = task.state === "active" && !task.subtask ? '<span class="nowchip">now</span>'
+            : task.state === "blocked" ? '<span class="blockedchip">blocked</span>' : "";
           const openHere = state.openThread === key;
           const thread = openHere && th
             ? threadHtml(key, th)
@@ -389,7 +421,8 @@ function renderDetail() {
   const open = Object.values(commentThreads()).filter((t) => t.state === "open").length;
   const tabs = `<div class="dtabs" role="tablist" aria-label="Track files">
     <button class="dtab" role="tab" type="button" data-dtab="plan" aria-selected="${state.detailTab === "plan"}">plan.md${open ? `<span class="dtabn">${open}</span>` : ""}</button>
-    <button class="dtab" role="tab" type="button" data-dtab="spec" aria-selected="${state.detailTab === "spec"}">spec.md</button></div>`;
+    <button class="dtab" role="tab" type="button" data-dtab="spec" aria-selected="${state.detailTab === "spec"}">spec.md</button>
+    ${d.handoff ? `<button class="dtab" role="tab" type="button" data-dtab="handoff" aria-selected="${state.detailTab === "handoff"}">handoff.md</button>` : ""}</div>`;
   const banner = d.handoff
     ? `<div class="handoff"><div class="handoff-body"><div class="handoff-head">Session handoff · ${esc(d.handoff.written || "")}</div>
        <div class="handoff-resume">Resume: ${esc(d.handoff.resumeTask || "see handoff.md")}</div></div>
@@ -400,6 +433,10 @@ function renderDetail() {
     body = d.spec
       ? `<div class="spechead"><code>conductor/tracks/${esc(d.id)}/spec.md</code></div><div class="spec">${mdToHtml(d.spec.text)}</div>`
       : '<div class="muted">No spec.md in this track folder.</div>';
+  } else if (state.detailTab === "handoff") {
+    body = d.handoff?.text
+      ? `<div class="spechead"><code>conductor/tracks/${esc(d.id)}/handoff.md</code></div><div class="spec">${mdToHtml(d.handoff.text)}</div>`
+      : '<div class="muted">No handoff.md in this track folder.</div>';
   } else if (d.plan.length) {
     body = planTree(d);
   } else {
@@ -412,6 +449,7 @@ function renderDetail() {
   $("primaryLabel").textContent = d.status === "done" ? "Track complete" : remaining ? "Implement next task" : "Finalize track";
   $("primaryBtn").disabled = d.status === "done";
   $("btnReview").disabled = $("btnHandoff").disabled = $("btnRevert").disabled = d.status === "planned" && !tasks.length;
+  $("btnArchive").disabled = d.status !== "done";
   $("tabTodosCount").textContent = String(remaining);
   $("tabTodosCount").style.display = remaining ? "" : "none";
 }
@@ -499,16 +537,33 @@ function renderTimeline() {
     .join("");
   const commits = t.lanes.reduce((a, l) => a + (l.points?.length || 0), 0);
   const spanDays = Math.max(1, Math.round((dayFloor(t.todayIso) - min) / 86400000));
+  // unified chronological feed: starts, completions, handoffs, shipped summaries
+  const shippedById = new Map();
+  for (const e of state.changelog?.entries || []) shippedById.set(e.trackId, e);
+  const events = [];
+  for (const l of t.lanes) {
+    if (l.span) {
+      events.push({ date: l.span.firstIso, type: "started", id: l.id, title: l.description || "" });
+      if (l.status === "done" && !shippedById.has(l.id))
+        events.push({ date: l.span.lastIso, type: "completed", id: l.id, title: l.description || "" });
+    }
+    if (l.handoff) events.push({ date: l.handoff, type: "handoff", id: l.id, title: "Session handoff written" });
+  }
+  for (const e of shippedById.values())
+    events.push({ date: e.date, type: "shipped", id: e.trackId, title: e.title + (e.shipped ? " — " + e.shipped : "") });
+  events.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  const evtIcon = { started: '<span class="evt-dot started"></span>', completed: '<span class="evt-dot completed"></span>',
+    handoff: '<span class="lg-swatch lg-hand"></span>', shipped: '<span class="evt-dot shipped"></span>' };
   let shipped = "";
-  const entries = (state.changelog?.entries || []).slice(0, 6);
-  if (entries.length) {
+  const shown = events.filter((e) => e.date).slice(0, 14);
+  if (shown.length) {
     shipped =
-      `<div class="shipped"><div class="shipped-head">Recently shipped</div>` +
-      entries
+      `<div class="shipped"><div class="shipped-head">History</div>` +
+      shown
         .map(
           (e) =>
-            `<div class="shipped-item"><span class="shipped-date">${esc(e.date || "—")}</span><span class="shipped-id">${esc(e.trackId)}</span>` +
-            `<span class="shipped-title" title="${e.synthesized ? "From the tracks registry" : "From conductor/changelog.md"}">${esc(e.title)}${e.shipped ? " — " + esc(e.shipped) : ""}${e.synthesized ? ' <span class="muted">(registry)</span>' : ""}</span></div>`,
+            `<div class="shipped-item">${evtIcon[e.type] || ""}<span class="shipped-date">${esc(e.date.slice(0, 10))}</span><span class="shipped-id">${esc(e.id)}</span>` +
+            `<span class="shipped-title">${esc(e.title)}${e.type === "started" ? ' <span class="muted">started</span>' : e.type === "handoff" ? "" : e.type === "completed" ? ' <span class="muted">completed</span>' : ""}</span></div>`,
         )
         .join("") +
       `</div>`;
@@ -553,15 +608,35 @@ function renderArch() {
       .join("") || "";
 }
 
+function renderArchive() {
+  const el = $("archive");
+  const rows = state.archived?.tracks || [];
+  if (!rows.length) {
+    el.innerHTML = '<div class="archhead">No archived tracks. Archiving moves finished tracks from conductor/tracks/ to conductor/archive/ (review cleanup, or the Archive action on a completed track).</div>';
+    return;
+  }
+  el.innerHTML = rows
+    .map(
+      (a) => `<button class="trackrow" type="button" data-archived="${esc(a.id)}">
+    <span class="status s-done"></span>
+    <span class="trackmain"><span class="trackname">${esc(a.id)}</span>
+    <span class="trackmeta">${esc(a.description)}</span>${miniBar(a)}</span>
+    <span class="trackside"><span class="chip c-done">Done</span><span class="trackcount">${a.done}/${a.total}</span>
+    ${a.lastIso ? `<span class="trackcount">${esc(a.lastIso.slice(0, 10))}</span>` : ""}</span></button>`,
+    )
+    .join("");
+}
+
 function renderAll() {
   renderHeader();
   renderList();
   renderDetail();
   renderArch();
+  renderArchive();
   renderTodos();
   if (state.view === "timeline") loadTimeline().then(renderTimeline).catch(() => {});
   else renderTimeline();
-  for (const v of ["conductor", "timeline", "architecture", "todos"]) {
+  for (const v of ["conductor", "timeline", "architecture", "archive", "todos"]) {
     $(`view-${v}`).hidden = v !== state.view;
     $(`tab-${v}`).setAttribute("aria-selected", String(v === state.view));
   }
@@ -571,7 +646,7 @@ function renderAll() {
 // ------------------------------------------------------------------- events
 
 document.body.addEventListener("click", async (e) => {
-  const el = e.target.closest("[data-track],[data-tab],[data-dtab],[data-thread],[data-reply],[data-resolve],[data-action],[data-plan],[data-dismiss],[data-sha]");
+  const el = e.target.closest("[data-track],[data-tab],[data-dtab],[data-thread],[data-reply],[data-resolve],[data-action],[data-plan],[data-dismiss],[data-sha],[data-archived]");
   if (!el) return;
   try {
     if (el.hasAttribute("data-plan") || el.hasAttribute("data-dismiss")) {
@@ -597,6 +672,15 @@ document.body.addEventListener("click", async (e) => {
     } else if (el.dataset.dtab) {
       state.detailTab = el.dataset.dtab;
       renderAll();
+    } else if (el.hasAttribute("data-archived")) {
+      state.selected = el.getAttribute("data-archived");
+      state.openThread = null;
+      state.openDiff = null;
+      state.view = "conductor";
+      renderAll();
+      await loadDetail();
+      renderAll();
+      return;
     } else if (el.hasAttribute("data-sha")) {
       const sha = el.getAttribute("data-sha");
       const diffKey = el.getAttribute("data-diff-key");
@@ -675,7 +759,7 @@ $("primaryBtn").addEventListener("click", async () => {
     toast("Failed: " + err.message);
   }
 });
-for (const [id, action] of [["btnReview", "review"], ["btnHandoff", "handoff"], ["btnRevert", "revert"]]) {
+for (const [id, action] of [["btnReview", "review"], ["btnHandoff", "handoff"], ["btnRevert", "revert"], ["btnArchive", "archive_track"]]) {
   $(id).addEventListener("click", async () => {
     try {
       const data = await callTool("request_action", { action, trackId: state.selected });
@@ -685,6 +769,7 @@ for (const [id, action] of [["btnReview", "review"], ["btnHandoff", "handoff"], 
     }
   });
 }
+$("btnArchive").insertAdjacentHTML("afterbegin", icon("archive"));
 async function runSetup() {
   try {
     const data = await callTool("request_action", { action: "setup" });
@@ -700,8 +785,8 @@ $("refreshBtn").addEventListener("click", async () => {
   renderAll();
 });
 
-for (const id of ["tab-conductor", "tab-timeline", "tab-architecture", "tab-todos"]) {
-  $(id).insertAdjacentHTML("afterbegin", icon({ "tab-conductor": "target", "tab-timeline": "calendar", "tab-architecture": "layers", "tab-todos": "checklist" }[id]));
+for (const id of ["tab-conductor", "tab-timeline", "tab-architecture", "tab-archive", "tab-todos"]) {
+  $(id).insertAdjacentHTML("afterbegin", icon({ "tab-conductor": "target", "tab-timeline": "calendar", "tab-architecture": "layers", "tab-archive": "archive", "tab-todos": "checklist" }[id]));
 }
 $("newtrack").insertAdjacentHTML("afterbegin", icon("plus"));
 $("draft-close").insertAdjacentHTML("afterbegin", icon("x"));
@@ -762,6 +847,7 @@ async function boot() {
   const ctx = app.getHostContext();
   applyTheme(ctx);
   readWidgetState(ctx);
+  loadVersion().then(renderHeader).catch(() => {});
   renderAll();
   try {
     await refreshTracks();

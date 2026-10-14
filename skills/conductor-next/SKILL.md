@@ -53,6 +53,7 @@ Apply the first matching case. When presenting any option list, put the recommen
 
 2.  **In-Progress Track(s) Exist (`[~]`):** This is the default resume path.
     -   Summarize the candidate(s) briefly: track name, current phase, the `[~]` task (or first `[ ]` task), and whether a session handoff is waiting.
+    -   **Blocked check:** if the resume target is marked `[!]` (blocked), say so. Ask via a **single-choice question**: route to the next unblocked task in that track, pick a different track, or hear what would unblock it. Never resume straight into a blocked task.
     -   **Exactly one candidate:** Ask via **Yes/No question** whether to resume it now.
     -   **Several candidates:** Ask via **multiple-choice question** which to resume. Order the options: tracks holding a `handoff.md` first (most recently written first), then other in-progress tracks.
     -   **If Approved:** Route to the `conductor-implement` skill (in ZCode: the `conductor:conductor-implement` skill). Mention that any session handoff will be picked up automatically.
@@ -74,5 +75,6 @@ Apply the first matching case. When presenting any option list, put the recommen
 
 ## 4. Internal Handoff
 
-1.  **Seamless Transition:** Invoke the chosen skill and present the transition as a natural progression ("Resuming the *login screen* track where we left off…") without mentioning skill names.
+1.  **Seamless Transition, Full Protocol:** Invoke the chosen skill via the Skill tool and follow its protocol from its first step — routing never licenses shortcuts. Present the transition as a natural progression ("Resuming the *login screen* track where we left off…") without mentioning skill names. If the Skill tool is unavailable, follow the chosen skill's SKILL.md in full rather than improvising.
 2.  **Carry Context:** Pass along everything already established here (selected track, handoff availability, candidate list) so the receiving skill does not re-ask what the user just answered.
+3.  **No Inline Implementation:** Never execute the receiving skill's work from the router — no skipped handshakes, no task loops, no plan edits here. If the chosen skill cannot be invoked, HALT and tell the user which `/conductor:*` command to run.
