@@ -29,6 +29,7 @@ const ICONS = {
   revert: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
   trending: '<path d="M22 7l-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>',
   layers: '<path d="m12 2 9 4.9-9 4.9-9-4.9z"/><path d="m21 11.4-9 4.9-9-4.9"/><path d="m21 16.2-9 4.9-9-4.9"/>',
+  chevron: '<path d="m6 9 6 6 6-6"/>',
   archive: '<rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
   refresh: '<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',
 };
@@ -44,6 +45,7 @@ const state = {
   detailTab: "plan", // plan | spec
   openThread: null,
   openDiff: null, // '<track>:<phaseIdx>:<taskIdx>' — only the clicked row opens
+  collapsedPhases: {}, // '<track>:p<idx>' -> true/false; default: collapsed when fully done
   diffs: {},
   timeline: null,
   timelineLoaded: false,
@@ -343,6 +345,10 @@ function planTree(detail) {
   const threads = commentThreads();
   return detail.plan
     .map((p, pi) => {
+      const phKey = `${detail.id}:p${pi}`;
+      const allDone = p.done === p.tasks.length && p.tasks.length > 0;
+      const collapsed = state.collapsedPhases[phKey] !== undefined ? state.collapsedPhases[phKey] : allDone;
+      const done = typeof p.done === "number" ? p.done : p.tasks.filter((x) => x.state === "done").length;
       const tasks = p.tasks
         .map((task, ti) => {
           const key = `${detail.id}:${pi}:${ti}`;
@@ -369,7 +375,8 @@ function planTree(detail) {
           return `<li class="task t-${task.state}${task.subtask ? " sub" : ""}"><span class="cb"></span><span class="tasklabel">${esc(task.label)}</span>${meta}${now}${bubble}</li>${thread}${diffRow}`;
         })
         .join("");
-      return `<div class="phase"><div class="phase-head"><span class="phase-name">${esc(p.name)}</span><span class="phase-count">${p.done}/${p.tasks.length}</span></div><ul class="tasks">${tasks}</ul></div>`;
+      const head = `<button class="phase-head" type="button" data-phase-toggle="${phKey}" aria-expanded="${!collapsed}"><span class="phase-chev${collapsed ? "" : " open"}">${icon("chevron")}</span><span class="phase-name">${esc(p.name)}</span><span class="phase-count">${done}/${p.tasks.length}</span></button>`;
+      return `<div class="phase">${head}${collapsed ? "" : `<ul class="tasks">${tasks}</ul>`}</div>`;
     })
     .join("");
 }
@@ -646,7 +653,7 @@ function renderAll() {
 // ------------------------------------------------------------------- events
 
 document.body.addEventListener("click", async (e) => {
-  const el = e.target.closest("[data-track],[data-tab],[data-dtab],[data-thread],[data-reply],[data-resolve],[data-action],[data-plan],[data-dismiss],[data-sha],[data-archived]");
+  const el = e.target.closest("[data-track],[data-tab],[data-dtab],[data-thread],[data-reply],[data-resolve],[data-action],[data-plan],[data-dismiss],[data-sha],[data-archived],[data-phase-toggle]");
   if (!el) return;
   try {
     if (el.hasAttribute("data-plan") || el.hasAttribute("data-dismiss")) {
@@ -680,6 +687,17 @@ document.body.addEventListener("click", async (e) => {
       renderAll();
       await loadDetail();
       renderAll();
+      return;
+    } else if (el.hasAttribute("data-phase-toggle")) {
+      const key = el.getAttribute("data-phase-toggle");
+      const cur = state.collapsedPhases[key];
+      if (cur === undefined) {
+        // derive current default from the rendered aria-expanded state
+        state.collapsedPhases[key] = el.getAttribute("aria-expanded") === "true";
+      } else {
+        state.collapsedPhases[key] = !cur;
+      }
+      renderDetail();
       return;
     } else if (el.hasAttribute("data-sha")) {
       const sha = el.getAttribute("data-sha");
@@ -869,8 +887,13 @@ async function boot() {
         const b = document.createElement("button");
         b.textContent = "Retry";
         b.addEventListener("click", () => $("refreshBtn").click());
+        const starting = String(err2.message).includes("host timeout");
         $("banner").append(
-          "Could not read conductor state (" + err2.message + "). The MCP server may still be starting — ", b);
+          starting
+            ? "Could not read conductor state — the MCP server may still be starting. "
+            : "Panel error while reading conductor state: " + err2.message + ". ",
+          b,
+        );
         $("banner").classList.add("show");
       }
     }
