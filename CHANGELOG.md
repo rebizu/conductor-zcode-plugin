@@ -3,6 +3,28 @@
 All notable changes to the Conductor for ZCode plugin. This plugin versions
 independently; the upstream version it was ported from is noted in the README.
 
+## 0.17.0 — 2026-10-16
+
+**The plan gate — real enforcement:** a plugin `PreToolUse` hook (matcher
+`Bash`) blocks `git commit` when the staged diff ticks `[x]` tasks in
+conductor plan files without their commit SHA, naming the offending lines and
+the exact fix. Backticks are now the canonical SHA format on tick lines
+(`- [x] Task: … ` + `` `abc1234` ``), matching what the server parses for the
+timeline; ticks in other formats (parens, bare) are blocked with the format
+hint. The hook runs automatically in every project where the plugin is
+enabled, never breaks the tool call on internal errors, and `--no-verify`
+remains the documented bypass. Registry `**Track:` lines are exempt.
+
+## 0.16.0 — 2026-10-16
+
+**SHA discipline goes mechanical:** a fresh project with current skills still
+skipped the SHA append on 8 of 10 completed tasks — exhortation alone drifts.
+Now: a **validity gate** in the implement loop (never commit a `plan.md` tick
+without its SHA — missing SHA means the code commit was skipped), a
+**phase-end SHA sweep** in the checkpoint checklist (every `[x]` line without
+a SHA is backfilled from `git log` before verification), and a **No SHA, no
+tick** rule in the workflow template that new projects scaffold with.
+
 ## 0.15.0 — 2026-10-14
 
 **Visible version + handoffs in the panel:**
@@ -24,6 +46,9 @@ independently; the upstream version it was ported from is noted in the README.
   feed — starts, completions, handoffs and shipped summaries in date order —
   so what went before what is readable at a glance instead of buried in bar
   geometry.
+- **Collapsible plan phases:** fully-completed phases start collapsed to a
+  single line in the track detail; every phase header toggles open/closed, so
+  an active track shows the work that's left, not the work that's done.
 
 ## 0.14.0 — 2026-10-14
 

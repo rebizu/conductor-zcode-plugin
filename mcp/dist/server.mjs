@@ -27900,7 +27900,7 @@ import path from "node:path";
 import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
 var DIST_DIR = path.dirname(fileURLToPath(import.meta.url));
-var VERSION = true ? "0.15.0" : "dev";
+var VERSION = true ? "0.17.0" : "dev";
 var PANEL_URI = "ui://conductor/panel.html";
 var CONDUCTOR_DIR = path.join(process.cwd(), "conductor");
 var TRACKS_DIR = path.join(CONDUCTOR_DIR, "tracks");
@@ -27997,7 +27997,10 @@ function parsePlan(md) {
   md = normalizeMd(md);
   const phases = [];
   let current = null;
-  for (const line of md.split("\n")) {
+  const lines = md.split("\n");
+  const isTaskLine = (l) => /^\s*[-*]\s+\[[ xX~!]\]/.test(l);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     const h = line.match(/^(#{1,6})\s+(.+?)\s*$/);
     if (h && h[1].length <= 3) {
       current = { name: h[2], tasks: [] };
@@ -28006,14 +28009,22 @@ function parsePlan(md) {
     }
     const t = line.match(/^(\s*)[-*]\s+\[([ xX~!])\]\s+(.+?)\s*$/);
     if (t && current) {
-      const label = t[3].replace(/^Task:\s*/i, "");
-      const sha = (t[3].match(/`([0-9a-f]{7,40})`/) || [])[1] || null;
+      let text = t[3].replace(/\s+$/, "");
+      let j2 = i + 1;
+      while (j2 < lines.length && lines[j2].trim() !== "" && /^\s{2,}\S/.test(lines[j2]) && !isTaskLine(lines[j2]) && !/^#{1,6}\s/.test(lines[j2])) {
+        text += " " + lines[j2].trim();
+        j2++;
+      }
+      const label = text.replace(/^Task:\s*/i, "");
+      const shaMatch = label.match(/`([0-9a-f]{7,40})`/) || label.match(/[(\[]([0-9a-f]{7,40})[)\]]/) || label.match(/(?:^|\s)([0-9a-f]{7,40})(?:\s|$)/);
+      const sha = shaMatch ? shaMatch[1] : null;
       current.tasks.push({
         state: statusOf(t[2]),
-        label,
+        label: label.replace(/\s+/g, " ").trim(),
         sha,
         subtask: !/^Task:/i.test(t[3].trim()) && t[1].length >= 2
       });
+      i = j2 - 1;
     }
   }
   return phases.filter((p) => p.tasks.length > 0).map((p) => ({

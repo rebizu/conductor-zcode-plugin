@@ -109,7 +109,12 @@ code { font-family: var(--czp-mono); }
 .dtabn { font-size: 9.5px; min-width: 14px; text-align: center; border-radius: 99px; padding: 0 4px; background: color-mix(in srgb, var(--czp-blue) 16%, transparent); color: var(--czp-blue); }
 
 .phase { margin-bottom: 12px; }
-.phase-head { display: flex; align-items: baseline; gap: 8px; padding-bottom: 5px; margin-bottom: 4px; border-bottom: 1px solid var(--czp-border); }
+.phase-head { width: 100%; text-align: left; display: flex; align-items: baseline; gap: 8px; padding-bottom: 5px; margin-bottom: 4px; border-bottom: 1px solid var(--czp-border); }
+.phase-head:hover { background: color-mix(in srgb, var(--czp-muted) 8%, transparent); }
+.phase-chev { display: inline-flex; color: var(--czp-muted); flex: none; align-self: center; }
+.phase-chev svg { transition: transform .12s ease; }
+.phase-chev.open svg { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .phase-chev svg { transition: none; } }
 .phase-name { font-weight: 500; font-size: 12.5px; }
 .phase-count { margin-left: auto; font-size: 11px; color: var(--czp-muted); font-variant-numeric: tabular-nums; }
 .tasks, ul.tasks { list-style: none; margin: 0; padding: 0; }

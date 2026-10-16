@@ -142,7 +142,10 @@ function parsePlan(md) {
   md = normalizeMd(md);
   const phases = [];
   let current = null;
-  for (const line of md.split("\n")) {
+  const lines = md.split("\n");
+  const isTaskLine = (l) => /^\s*[-*]\s+\[[ xX~!]\]/.test(l);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     const h = line.match(/^(#{1,6})\s+(.+?)\s*$/);
     if (h && h[1].length <= 3) {
       current = { name: h[2], tasks: [] };
@@ -151,14 +154,35 @@ function parsePlan(md) {
     }
     const t = line.match(/^(\s*)[-*]\s+\[([ xX~!])\]\s+(.+?)\s*$/);
     if (t && current) {
-      const label = t[3].replace(/^Task:\s*/i, "");
-      const sha = (t[3].match(/`([0-9a-f]{7,40})`/) || [])[1] || null;
+      // wrapped tasks continue on indented lines — join them so a SHA
+      // recorded on the last continuation line is still found
+      let text = t[3].replace(/\s+$/, "");
+      let j = i + 1;
+      while (
+        j < lines.length &&
+        lines[j].trim() !== "" &&
+        /^\s{2,}\S/.test(lines[j]) &&
+        !isTaskLine(lines[j]) &&
+        !/^#{1,6}\s/.test(lines[j])
+      ) {
+        text += " " + lines[j].trim();
+        j++;
+      }
+      const label = text.replace(/^Task:\s*/i, "");
+      // read any common SHA form (backticks canonical, but legacy parens,
+      // brackets and bare trailing hashes all light up the timeline too)
+      const shaMatch =
+        label.match(/`([0-9a-f]{7,40})`/) ||
+        label.match(/[(\[]([0-9a-f]{7,40})[)\]]/) ||
+        label.match(/(?:^|\s)([0-9a-f]{7,40})(?:\s|$)/);
+      const sha = shaMatch ? shaMatch[1] : null;
       current.tasks.push({
         state: statusOf(t[2]),
-        label,
+        label: label.replace(/\s+/g, " ").trim(),
         sha,
         subtask: !/^Task:/i.test(t[3].trim()) && t[1].length >= 2,
       });
+      i = j - 1;
     }
   }
   return phases

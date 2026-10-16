@@ -1,0 +1,19 @@
+{
+  "description": "Conductor plan gate: blocks git commits that tick [x] tasks in conductor plan files without their commit SHA",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "process",
+            "command": "node",
+            "args": ["${ZCODE_PLUGIN_ROOT}/hooks/plan-gate.mjs"],
+            "timeoutMs": 10000,
+            "statusMessage": "conductor: plan gate…"
+          }
+        ]
+      }
+    ]
+  }
+}

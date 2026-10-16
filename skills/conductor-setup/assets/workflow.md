@@ -87,6 +87,9 @@ All tasks follow a strict lifecycle:
     -   **Step 10.1: Update Plan:** Read `plan.md`, find the line for the
         completed task, update its status from `[~]` to `[x]`, and append the
         first 7 characters of the *just-completed commit's* commit hash.
+    -   **No SHA, no tick:** if the commit hash is unavailable, STOP — the
+        code commit (Step 8) was skipped. Never commit a `[x]` line without
+        its SHA.
     -   **Step 10.2: Write Plan:** Write the updated content back to `plan.md`.
     -   **Step 10.3: Sync Todo List:** If the host's native todo tool is
         available (in ZCode: `TodoWrite`), mark this task's entry `completed`

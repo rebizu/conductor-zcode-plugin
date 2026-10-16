@@ -6,7 +6,7 @@
       "name": "conductor",
       "source": ".",
       "description": "Conductor Spec-Driven Development for ZCode: tracks with spec + plan, phased implementation synced to ZCode's todo list, next/status/review/git-aware revert/architecture-review commands, plan amendments, session handoff notes for resuming work across sessions, and a live Conductor panel (MCP App) with registry, plan tree, comments, timeline and todos.",
-      "version": "0.15.0"
+      "version": "0.17.0"
     }
   ]
 }

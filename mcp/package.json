@@ -1,12 +1,12 @@
 {
   "name": "conductor-mcp",
   "private": true,
-  "version": "0.15.0",
+  "version": "0.17.0",
   "type": "module",
   "description": "Conductor MCP server + panel UI for the conductor ZCode plugin",
   "scripts": {
     "build": "node build.mjs",
-    "test": "node test/e2e.mjs && node test/panel-smoke.mjs"
+    "test": "node test/e2e.mjs && node test/panel-smoke.mjs && node test/plan-gate.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/client": "2.3.1",

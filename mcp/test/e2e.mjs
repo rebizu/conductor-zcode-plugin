@@ -113,6 +113,7 @@ fs.writeFileSync(
   path.join(cond, "tracks/002_mcp-panel/plan.md"),
   plan([["x", "Serve panel resource", shaTask], ["~", "Write panel shell", null], [" ", "Subscribe to updates", null], ["!", "Blocked: waiting on API creds", null]]),
 );
+fs.appendFileSync(path.join(cond, "tracks/002_mcp-panel/plan.md"), "- [x] Task: Parens tick (" + shaTask + ")\n");
 assert.equal(git(["add", "-A"]).status, 0);
 assert.equal(git(["commit", "-qm", "chore(conductor): plans"]).status, 0, "git commit 2");
 
@@ -190,8 +191,9 @@ try {
 
   // version: build version, manifest version, workspace binding
   const ver = JSON.parse((await rpc.request("tools/call", { name: "get_version", arguments: {} })).content[0].text);
-  assert.equal(ver.pluginVersion, "0.15.0");
-  assert.equal(ver.buildVersion, "0.15.0");
+  const pkgVersion = JSON.parse(fs.readFileSync(path.join(DIST, "..", "package.json"), "utf-8")).version;
+  assert.equal(ver.pluginVersion, pkgVersion);
+  assert.equal(ver.buildVersion, pkgVersion);
   assert.equal(ver.cwd, fixture);
   assert.equal(ver.conductorDir, path.join(fixture, "conductor"));
   ok("get_version: plugin + build version, workspace binding");
@@ -205,8 +207,8 @@ try {
   // list_tracks
   const lt = JSON.parse((await rpc.request("tools/call", { name: "list_tracks", arguments: {} })).content[0].text);
   assert.equal(lt.tracks.length, 2);
-  assert.equal(lt.summary.total, 7);
-  assert.equal(lt.summary.done, 4);
+  assert.equal(lt.summary.total, 8);
+  assert.equal(lt.summary.done, 5);
   const t2 = lt.tracks.find((t) => t.id === "002_mcp-panel");
   assert.equal(t2.status, "active");
   assert.equal(t2.hasHandoff, true);
@@ -219,7 +221,8 @@ try {
     (await rpc.request("tools/call", { name: "get_track", arguments: { trackId: "002_mcp-panel" } })).content[0].text,
   );
   assert.equal(gt.plan.length, 1);
-  assert.equal(gt.plan[0].tasks.length, 4);
+  assert.equal(gt.plan[0].tasks.length, 5);
+  assert.equal(gt.plan[0].tasks[4].sha, shaTask, "parens-form SHA read");
   assert.equal(gt.plan[0].tasks[0].sha, shaTask);
   assert.equal(gt.plan[0].tasks[3].state, "blocked", "[!] parses as blocked");
   assert.equal(gt.plan[0].tasks[1].state, "active");
@@ -238,7 +241,7 @@ try {
   assert.ok(lane1.points.every((p) => p.iso), "points have commit dates");
   assert.ok(lane1.span && lane1.span.commits >= 1, "lane1 span from git history");
   assert.ok(lane2.span && lane2.span.commits >= 1, "lane2 span from git history");
-  assert.equal(lane2.points.length, 1);
+  assert.equal(lane2.points.length, 2, "parens SHA counted");
   assert.ok(lane2.points[0].iso, "point has commit date");
   assert.ok(lane2.handoff);
   ok("timeline: spans + per-SHA resilience (bogus SHA skipped)");

@@ -116,8 +116,9 @@ small icon set is lucide-inspired (ISC license).
 ## Works together with the other local plugins
 
 Conductor's core is **skills + commands**; the panel adds a read-mostly MCP
-server (no hooks), so it still cannot interfere with the other plugins' hooks
-or tools, and they cannot interfere with it. They compose well: Conductor's
+server and a single `PreToolUse` hook (the **plan gate**) that blocks commits
+ticking `[x]` tasks without their commit SHA. It still cannot interfere with
+the other plugins' hooks or tools, and they cannot interfere with it. They compose well: Conductor's
 spec-driven flow is token-hungry by design, and the other plugins claw those
 tokens back:
 
